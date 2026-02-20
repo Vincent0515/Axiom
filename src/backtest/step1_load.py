@@ -1,5 +1,6 @@
 from pathlib import Path
 import pandas as pd
+import numpy as np
 
 feature_files = list((Path("data") / "features").glob("*_feat.parquet"))
 if not feature_files:
@@ -36,3 +37,19 @@ drawdown = df["equity"] / rolling_max - 1
 max_dd = drawdown.min()
 
 print("Max Drawdown:", max_dd)
+
+# ------------------------------------------------------------
+# Risk Metric: Sharpe Ratio
+# We annualize daily return by multiplying sqrt(252)
+# Sharpe measures return per unit of volatility
+# ------------------------------------------------------------
+
+r = df["strategy_ret"].dropna()
+
+# Avoid division by zero if strategy has no variance
+if r.std() == 0 or np.isnan(r.std()):
+    sharpe = 0.0
+else:
+    sharpe = (r.mean() / r.std()) * np.sqrt(252)
+
+print("Sharpe:", sharpe)
