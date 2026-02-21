@@ -1,0 +1,5 @@
+# filename: ma_baseline_new.yaml
+run_name: ma_baseline_new
+feature_file: data/features/AAPL_2020-01-01_2025-01-01_feat.parquet
+ma_window: 20
+windows: [5, 10, 20]

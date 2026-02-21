@@ -22,10 +22,14 @@ def main() -> None:
     args = parse_args()
     config = load_config(args.config)
 
-    max_dd_limit = config["risk"]["max_drawdown"]
-    coarse_windows = config["search"]["coarse_windows"]
-    refine_range = config["search"]["refine_range"]
-    refine_step = config["search"]["refine_step"]
+    # --- Optional config blocks with safe defaults (infra: avoid KeyError) ---
+    risk_cfg = config.get("risk", {})
+    max_dd_limit = float(risk_cfg.get("max_drawdown", 1.0))  # 1.0 = almost no drawdown limit
+
+    search_cfg = config.get("search", {})
+    coarse_windows = search_cfg.get("coarse_windows", [5, 10, 15, 20, 25, 30, 35, 40, 50, 100, 200])
+    refine_range = int(search_cfg.get("refine_range", 10))   # +/- range around best coarse window
+    refine_step  = int(search_cfg.get("refine_step", 5))     # step size in refine search
     # ------------------------------------------------------------
     # Agent Goal:
     # Automatically search MA window parameter and pick the best one.

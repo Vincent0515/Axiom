@@ -1,0 +1,5 @@
+# filename: ma_conservative_new.yaml
+run_name: ma_conservative_new
+feature_file: data/features/AAPL_2020-01-01_2025-01-01_feat.parquet
+ma_window: 30
+windows: [10, 20, 50]

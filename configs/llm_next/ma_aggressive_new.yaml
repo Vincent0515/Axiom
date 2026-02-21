@@ -1,0 +1,5 @@
+# filename: ma_aggressive_new.yaml
+run_name: ma_aggressive_new
+feature_file: data/features/AAPL_2020-01-01_2025-01-01_feat.parquet
+ma_window: 10
+windows: [3, 7, 14]
