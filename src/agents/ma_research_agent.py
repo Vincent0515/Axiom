@@ -1,15 +1,26 @@
 from __future__ import annotations
 from src.config import load_config
-
 from pathlib import Path
+
+import argparse
 import json
 import pandas as pd
 
 from src.backtest.run_ma_backtest import run_ma_backtest
 
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line arguments so this agent can be automated / scripted.
+    """
+    p = argparse.ArgumentParser(description="Axiom MA Research Agent (config-driven)")
+    p.add_argument("--config", default="configs/ma.yaml", help="Path to YAML config file")
+    p.add_argument("--features", default="data/features", help="Folder containing *_feat.parquet files")
+    p.add_argument("--outdir", default="data/reports", help="Output folder for reports (csv/json)")
+    return p.parse_args()
 
 def main() -> None:
-    config = load_config("configs/ma.yaml")
+    args = parse_args()
+    config = load_config(args.config)
 
     max_dd_limit = config["risk"]["max_drawdown"]
     coarse_windows = config["search"]["coarse_windows"]
@@ -22,7 +33,7 @@ def main() -> None:
     # ------------------------------------------------------------
 
     # Select one feature file to work on (later we can support multi-ticker)
-    feature_files = list((Path("data") / "features").glob("*_feat.parquet"))
+    feature_files = list(Path(args.features).glob("*_feat.parquet"))
     if not feature_files:
         raise FileNotFoundError("No feature files found in data/features")
 
@@ -83,7 +94,7 @@ def main() -> None:
     best = ranked.iloc[0].to_dict()
 
     # 5) Save artifacts (industrial habit)
-    out_dir = Path("data") / "reports"
+    out_dir = Path(args.outdir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     df.to_csv(out_dir / "ma_sweep.csv", index=False)
