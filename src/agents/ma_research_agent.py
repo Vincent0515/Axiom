@@ -1,4 +1,5 @@
 from __future__ import annotations
+from src.config import load_config
 
 from pathlib import Path
 import json
@@ -8,6 +9,12 @@ from src.backtest.run_ma_backtest import run_ma_backtest
 
 
 def main() -> None:
+    config = load_config("configs/ma.yaml")
+
+    max_dd_limit = config["risk"]["max_drawdown"]
+    coarse_windows = config["search"]["coarse_windows"]
+    refine_range = config["search"]["refine_range"]
+    refine_step = config["search"]["refine_step"]
     # ------------------------------------------------------------
     # Agent Goal:
     # Automatically search MA window parameter and pick the best one.
@@ -27,7 +34,6 @@ def main() -> None:
     # Stage 1: coarse search
     # Stage 2: refine around the best window from Stage 1
     # ------------------------------------------------------------
-    coarse_windows = [10, 20, 50, 100, 200]
 
     # Stage 1 experiments
     results: list[dict] = []
@@ -42,10 +48,10 @@ def main() -> None:
     w_star = int(best_stage1["ma_window"])
 
     # Stage 2: refine around w_star (clamp to sensible bounds)
-    low = max(5, w_star - 20)
-    high = min(250, w_star + 20)
+    low = max(5, w_star - refine_range)
+    high = min(250, w_star + refine_range)
 
-    refine_windows = list(range(low, high + 1, 5))  # step=5 is a good start
+    refine_windows = list(range(low, high + 1, refine_step))
 
     # Run Stage 2 experiments (avoid duplicates)
     seen = set(df_stage1["ma_window"].astype(int).tolist())
@@ -66,7 +72,6 @@ def main() -> None:
     # ------------------------------------------------------------
     df = pd.DataFrame(results)
 
-    max_dd_limit = -0.30  # e.g. reject strategies worse than -30% drawdown
     survivors = df[df["max_drawdown"] >= max_dd_limit].copy()
 
     if len(survivors) > 0:
