@@ -13,47 +13,48 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
-    out_root = Path(args.out_root)
-
-    if not out_root.exists():
-        raise FileNotFoundError(f"out_root not found: {out_root}")
+def summarize(out_root: str) -> Path:
+    """
+    Read best_config.json from each run folder and write a summary.csv.
+    Returns the summary.csv path.
+    """
+    out_root_path = Path(out_root)
+    if not out_root_path.exists():
+        raise FileNotFoundError(f"out_root not found: {out_root_path}")
 
     rows: list[dict] = []
-
-    # Each run is a folder under out_root, containing best_config.json
-    for run_dir in sorted([p for p in out_root.iterdir() if p.is_dir()]):
+    for run_dir in sorted([p for p in out_root_path.iterdir() if p.is_dir()]):
         best_path = run_dir / "best_config.json"
         if not best_path.exists():
-            # Skip folders without the expected artifact
             continue
 
         with best_path.open("r", encoding="utf-8") as f:
             best = json.load(f)
 
-        # Add run metadata
         best["run_name"] = run_dir.name
         rows.append(best)
 
     if not rows:
-        raise RuntimeError(f"No best_config.json found under: {out_root}")
+        raise RuntimeError(f"No best_config.json found under: {out_root_path}")
 
     df = pd.DataFrame(rows)
-
-    # Put run_name first for readability
     cols = ["run_name"] + [c for c in df.columns if c != "run_name"]
     df = df[cols]
 
-    # Sort by sharpe descending
     if "sharpe" in df.columns:
         df = df.sort_values("sharpe", ascending=False)
 
-    out_path = out_root / "summary.csv"
+    out_path = out_root_path / "summary.csv"
     df.to_csv(out_path, index=False)
 
     print("Saved summary:", out_path)
     print(df[["run_name", "ma_window", "total_return", "max_drawdown", "sharpe"]])
+    return out_path
+
+
+def main() -> None:
+    args = parse_args()
+    summarize(args.out_root)
 
 
 if __name__ == "__main__":

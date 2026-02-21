@@ -7,10 +7,6 @@ import sys
 
 
 def parse_args() -> argparse.Namespace:
-    """
-    Batch runner for running multiple experiment configs.
-    This is infra glue: it orchestrates many agent runs reproducibly.
-    """
     p = argparse.ArgumentParser(description="Run Axiom agents for all YAML configs in a folder.")
     p.add_argument("--configs_dir", default="configs", help="Folder containing *.yaml configs")
     p.add_argument("--features", default="data/features", help="Folder containing *_feat.parquet files")
@@ -18,43 +14,45 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def run_batch(configs_dir: str, features: str, out_root: str) -> Path:
+    """
+    Run MA research agent for every YAML config in configs_dir.
+    Returns the output root folder path.
+    """
+    configs_path = Path(configs_dir)
+    out_root_path = Path(out_root)
+    out_root_path.mkdir(parents=True, exist_ok=True)
 
-    configs_dir = Path(args.configs_dir)
-    out_root = Path(args.out_root)
-    out_root.mkdir(parents=True, exist_ok=True)
-
-    configs = sorted(configs_dir.glob("*.yaml"))
+    configs = sorted(configs_path.glob("*.yaml"))
     if not configs:
-        raise FileNotFoundError(f"No .yaml configs found in: {configs_dir}")
+        raise FileNotFoundError(f"No .yaml configs found in: {configs_path}")
 
-    # ------------------------------------------------------------
-    # For each config:
-    # - create a dedicated output folder
-    # - call the agent via 'python -m ...' so imports work
-    # ------------------------------------------------------------
     for cfg in configs:
-        run_name = cfg.stem  # filename without extension
-        run_out = out_root / run_name
+        run_name = cfg.stem
+        run_out = out_root_path / run_name
         run_out.mkdir(parents=True, exist_ok=True)
 
         cmd = [
             sys.executable, "-m", "src.agents.ma_research_agent",
             "--config", str(cfg),
-            "--features", args.features,
+            "--features", features,
             "--outdir", str(run_out),
         ]
 
         print("\n=== Running:", run_name, "===")
         print("Command:", " ".join(cmd))
 
-        # Run and stream output. If any run fails, stop immediately.
         result = subprocess.run(cmd)
         if result.returncode != 0:
             raise RuntimeError(f"Run failed for config={cfg} (exit={result.returncode})")
 
-    print("\nAll runs completed. Output root:", out_root)
+    print("\nAll runs completed. Output root:", out_root_path)
+    return out_root_path
+
+
+def main() -> None:
+    args = parse_args()
+    run_batch(args.configs_dir, args.features, args.out_root)
 
 
 if __name__ == "__main__":
